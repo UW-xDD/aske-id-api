@@ -52,11 +52,11 @@ if not table_exists(cur, "object"):
 
 @bp.route('/reserve')
 def reserve():
-    api_key = request.get('api_key', default=None)
+    api_key = request.args.get('api_key', default=None)
     if api_key is None:
         return {"error" : "You must specify an API key!"}
 
-    n_requested = request.get('n', default=10)
+    n_requested = request.args.get('n', default=10)
 
     cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)", api_key)
     registrant_id = cur.fetchone()
@@ -75,11 +75,11 @@ def reserve():
 
 @bp.route('/register/<oid>')
 def register(oid):
-    api_key = request.get('api_key', default=None)
+    api_key = request.args.get('api_key', default=None)
     if api_key is None:
         return {"error" : "You must specify an API key!"}
 
-    location = request.get('location')
+    location = request.args.get('location')
     if location is None:
         return {"error" : "You must specify a location to register this ASKE-id."}
 
