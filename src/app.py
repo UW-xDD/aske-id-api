@@ -63,15 +63,14 @@ def reserve():
     if registrant_id is None:
         return {"error" : "Provided API key not allowed to reserve ASKE-IDs!"}
 
-    uuids = [uuid4() for i in range(n_requested)]
+    uuids = [str(uuid4()) for i in range(n_requested)]
 
-    # INSERT INTO object n
     # TODO : catch foreign key exception
     execute_values(cur,
         "INSERT INTO object (id, registrant_id) VALUES %s",
         [(uuid, registrant_id) for uuid in uuids])
     conn.commit()
-    return jsonify(uuids)
+    return {"success" : True, "reserved_ids" : uuids}
 
 @bp.route('/register/<oid>')
 def register(oid):
@@ -89,6 +88,7 @@ def register(oid):
     if registrant_id is None:
         return {"error" : "Provided API key not allowed to register this ASKE-ID!"}
     cur.execute("UPDATE object SET location=%(location)s WHERE o.id=%(oid)s", {"location" : location, "oid": oid})
+    conn.commit()
     return {"success" : True}
 
 if 'PREFIX' in os.environ:
