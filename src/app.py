@@ -58,7 +58,7 @@ def reserve():
 
     n_requested = request.args.get('n', default=10)
 
-    cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)", api_key)
+    cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
     registrant_id = cur.fetchone()
     if registrant_id is None:
         return {"error" : "Provided API key not allowed to reserve ASKE-IDs!"}
@@ -84,11 +84,12 @@ def register(oid):
         return {"error" : "You must specify a location to register this ASKE-id."}
 
     #  check that this API key is allowed to register this oid
-    cur.execute("SELECT r.id FROM registrant r, object o WHERE o.registrant_id=r.id AND r.api_key=%(api_key) AND o.id=oid", {"api_key" : api_key, "oid" : oid})
+    cur.execute("SELECT r.id FROM registrant r, object o WHERE o.registrant_id=r.id AND r.api_key=%(api_key)s AND o.id=%(oid)s", {"api_key" : api_key, "oid" : oid})
     registrant_id = cur.fetchone()
     if registrant_id is None:
         return {"error" : "Provided API key not allowed to register this ASKE-ID!"}
-    cur.execute("UPDATE object SET location=%(location) WHERE o.id=%(oid)", {"location" : location, "oid": oid})
+    cur.execute("UPDATE object SET location=%(location)s WHERE o.id=%(oid)s", {"location" : location, "oid": oid})
+    return {"success" : True}
 
 if 'PREFIX' in os.environ:
     logging.info(f"Stripping {os.environ['PREFIX']}")
