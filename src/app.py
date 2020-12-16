@@ -87,7 +87,7 @@ def register(oid):
     registrant_id = cur.fetchone()
     if registrant_id is None:
         return {"error" : "Provided API key not allowed to register this ASKE-ID!"}
-    cur.execute("UPDATE object SET location=%(location)s WHERE o.id=%(oid)s", {"location" : location, "oid": oid})
+    cur.execute("UPDATE object SET location=%(location)s WHERE id=%(oid)s", {"location" : location, "oid": oid})
     conn.commit()
     return {"success" : True}
 
