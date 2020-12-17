@@ -114,7 +114,7 @@ def reserve():
     return {"success" : True, "reserved_ids" : uuids}
 
 @bp.route('/register/', methods=["POST"])
-def register(oid):
+def register():
     helptext = {
             "v" : VERSION,
             "description": "Register a location for a reserved ASKE-ID.",
@@ -132,7 +132,6 @@ def register(oid):
                 }
             }
 
-    data = request.get_json(force=True)
 
     headers = request.headers
     api_key = headers.get('x-api-key', default = None)
@@ -147,7 +146,7 @@ def register(oid):
                 }
                 }
 
-    objects = data.get('objects', type=list, default=[])
+    objects = request.get_json(force=True)
     success = False
     for oid, location in objects:
         # TODO: maybe get all oids this key can register and do the check in-memory instead of against the DB?
