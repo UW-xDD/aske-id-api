@@ -60,7 +60,8 @@ def index():
                 "descriptions" : "API for reserving or registering ASKE-IDs",
                 "routes": {
                     f"/api/{VERSION}/reserve" : "Reserve a block of ASKE-IDs for later registration.",
-                    f"/api/{VERSION}/register" : "Register a location for a reserved ASKE-ID."
+                    f"/api/{VERSION}/register" : "Register a location for a reserved ASKE-ID.",
+                    f"/api/{VERSION}/id" : "Lookup an ASKE-ID."
                     }
                 }
         }
