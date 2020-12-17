@@ -72,7 +72,7 @@ def reserve():
             "description": "Reserve a block of ASKE-IDs for later registration.",
             "options" : {
                 "parameters" : {
-                    "api_key" : "(required) API key assigned to an ASKE-ID registrant. Can also be passed as a header in the 'x-api-key' field."
+                    "api_key" : "(required) API key assigned to an ASKE-ID registrant. Can also be passed as a header in the 'x-api-key' field.",
                     "n" : "(option, int, default 10) Number of ASKE-IDs to reserve."
                     },
                 "methods" : ["POST"],
@@ -184,17 +184,40 @@ def register():
         }
 
 @bp.route('/id/<oid>', methods=["GET"])
-        cur.execute("SELECT o.id, o.location, r.name FROM registrant r, object o WHERE o.id=%(oid)s", {"oid" : oid})
-        oid, location, registrant = cur.fetchone()
-        if registrant_id is None:
-            return {"error" : "ASKE-ID not found!"}
-        else:
-            return {"success" : {
-                "identifier" : [{"type" : "_aske-id", "id" : oid}],
-                "link" : [{"url" : location}],
-                "registrant" : registrant
+def lookup(oid):
+    helptext = {
+            "v" : VERSION,
+            "description": "Look up an ASKE-ID ",
+            "options" : {
+                "parameters" : {
+                    "aske_id" : "ASKE-ID to look up (may also be supplied as a bare positional argument on this URL)."
+                    },
+                "output_formats" : ["bibjson"],
+                "examples": ['/api/id/ba736f76-27c1-4156-9f4e-752862c21bc2', '/api/id?aske_id=ba736f76-27c1-4156-9f4e-752862c21bc2']
                 }
             }
+
+    if oid is None:
+        oid = request.args.get('aske_id', default=None)
+    if oid is None:
+        return{
+                "error" : {
+                    "message": "You most provide an ASKE-ID to look up!",
+                    "v": VERSION,
+                    "about" : helptext
+                    }
+                }
+    cur.execute("SELECT o.id, o.location, r.name FROM registrant r, object o WHERE o.id=%(oid)s", {"oid" : oid})
+    oid, location, registrant = cur.fetchone()
+    if oid is None:
+        return {"error" : "ASKE-ID not found!"}
+    else:
+        return {"success" : {
+            "identifier" : [{"type" : "_aske-id", "id" : oid}],
+            "link" : [{"url" : location}],
+            "registrant" : registrant
+            }
+        }
 
 if 'PREFIX' in os.environ:
     logging.info(f"Stripping {os.environ['PREFIX']}")
