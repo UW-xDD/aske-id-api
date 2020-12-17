@@ -65,14 +65,14 @@ def index():
                 }
         }
 
-@bp.route('/reserve', methods=["POST"])
+@bp.route('/reserve', methods=["GET", "POST"])
 def reserve():
     helptext = {
             "v" : VERSION,
             "description": "Reserve a block of ASKE-IDs for later registration.",
             "options" : {
                 "parameters" : {
-                    "api_key" : "(required) API key assigned to an ASKE-ID registrant.",
+                    "api_key" : "(required) API key assigned to an ASKE-ID registrant. Can also be passed as a header in the 'x-api-key' field."
                     "n" : "(option, int, default 10) Number of ASKE-IDs to reserve."
                     },
                 "methods" : ["POST"],
@@ -84,6 +84,10 @@ def reserve():
                 "examples": []
                 }
             }
+
+    if request.method == "GET":
+        return {"success" : helptext}
+
     headers = request.headers
     api_key = headers.get('x-api-key', default = None)
     if api_key is None:
@@ -120,17 +124,20 @@ def register():
             "description": "Register a location for a reserved ASKE-ID.",
             "options" : {
                 "parameters" : {
-                    "api_key" : "(required) API key assigned to an ASKE-ID registrant.",
-                    "location" : "(required) Location of ASKE data resource to register to this ASKE-ID."
+                    "api_key" : "(required) API key assigned to an ASKE-ID registrant. Can also be passed as a header in the 'x-api-key' field."
                     },
+                "body" : "POSTed request body must be a JSON object of the form [[ASKE-ID, location], [ASKE-ID, location]].",
                 "methods" : ["POST"],
                 "output_formats" : ["json"],
                 "fields" : {
-                    "reserved_ids" : "List of unique ASKE-IDs reserved for usage by the associated registrant API key."
+                    "registered_ids" : "List of successfully registered (or updated) ASKE-IDs."
                     },
                 "examples": []
                 }
             }
+    if request.method == "GET":
+        return {"success" : helptext}
+
     headers = request.headers
     api_key = headers.get('x-api-key', default = None)
     if api_key is None:
@@ -144,7 +151,6 @@ def register():
                     "about" : helptext
                 }
                 }
-
     try:
         objects = request.get_json()
     except:
@@ -176,6 +182,19 @@ def register():
             "registered_ids" : registered
         }
         }
+
+@bp.route('/id/<oid>', methods=["GET"])
+        cur.execute("SELECT o.id, o.location, r.name FROM registrant r, object o WHERE o.id=%(oid)s", {"oid" : oid})
+        oid, location, registrant = cur.fetchone()
+        if registrant_id is None:
+            return {"error" : "ASKE-ID not found!"}
+        else:
+            return {"success" : {
+                "identifier" : [{"type" : "_aske-id", "id" : oid}],
+                "link" : [{"url" : location}],
+                "registrant" : registrant
+                }
+            }
 
 if 'PREFIX' in os.environ:
     logging.info(f"Stripping {os.environ['PREFIX']}")
