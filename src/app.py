@@ -136,7 +136,6 @@ def register():
     if api_key is None:
         api_key = request.args.get('api_key', default=None)
         logging.info(f"got api_key from request.args")
-    logging.info(f"{api_key}")
     if api_key is None:
         return {"error" :
                 {
@@ -147,26 +146,36 @@ def register():
                 }
 
     try:
-        objects = request.data
-        logging.info(f"objects: {objects}")
         objects = request.get_json()
-        logging.info(f"objects: {objects}")
     except:
-        logging.info(sys.exc_info())
+        return {"error" :
+                {
+                    "message" : "Invalid body! Registration expects a JSON object of the form [[<ASKE-ID>, <location>], [<ASKE-ID>, <location>]].",
+                    "v" : VERSION,
+                    "about" : helptext
+                }
+                }
 
-    success = False
+    registered = []
     for oid, location in objects:
         logging.info(f"Registering {oid} to {location}")
         # TODO: maybe get all oids this key can register and do the check in-memory instead of against the DB?
-        cur.execute("SELECT r.id FROM registrant r, object o WHERE o.registrant_id=r.id AND r.api_key=%(api_key)s AND o.id=%(oid)s", {"api_key" : api_key, "oid" : oid})
-        registrant_id = cur.fetchone()
-        if registrant_id is None:
-            continue
-#            return {"error" : "Provided API key not allowed to register this ASKE-ID!"}
-        cur.execute("UPDATE object SET location=%(location)s WHERE id=%(oid)s", {"location" : location, "oid": oid})
-        conn.commit()
-        success = True
-    return {"success" : success}
+        try:
+            cur.execute("SELECT r.id FROM registrant r, object o WHERE o.registrant_id=r.id AND r.api_key=%(api_key)s AND o.id=%(oid)s", {"api_key" : api_key, "oid" : oid})
+            registrant_id = cur.fetchone()
+            if registrant_id is None:
+                continue
+    #            return {"error" : "Provided API key not allowed to register this ASKE-ID!"}
+            cur.execute("UPDATE object SET location=%(location)s WHERE id=%(oid)s", {"location" : location, "oid": oid})
+            conn.commit()
+            registered.append(oid)
+        except:
+            logging.info(f"Couldn't register {oid} to {location}.")
+            conn.commit()
+    return {"success" : {
+            "registered_ids" : registered
+        }
+        }
 
 if 'PREFIX' in os.environ:
     logging.info(f"Stripping {os.environ['PREFIX']}")
