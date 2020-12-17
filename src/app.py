@@ -147,20 +147,11 @@ def register():
                 }
 
     try:
-        objects = request.get_json(force=True)
+        objects = request.data
+        logging.info(f"objects: {objects}")
+        objects = request.get_json()
+        logging.info(f"objects: {objects}")
     except:
-        try:
-            logging.info(request)
-        except:
-            logging.info("couldn't get request")
-        try:
-            logging.info(request.form)
-        except:
-            logging.info("couldn't get request form")
-        try:
-            logging.info(request.data)
-        except:
-            logging.info("couldn't get request data")
         logging.info(sys.exc_info())
 
     success = False
