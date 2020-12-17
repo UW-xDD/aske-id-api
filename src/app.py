@@ -4,7 +4,7 @@ from flask_cors import CORS
 import psycopg2
 from psycopg2.extras import execute_values
 import logging
-import os
+import os, sys
 from uuid import uuid4
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 
@@ -113,7 +113,7 @@ def reserve():
     conn.commit()
     return {"success" : True, "reserved_ids" : uuids}
 
-@bp.route('/register/', methods=["POST"])
+@bp.route('/register', methods=["POST"])
 def register():
     helptext = {
             "v" : VERSION,
@@ -131,12 +131,12 @@ def register():
                 "examples": []
                 }
             }
-
-
     headers = request.headers
     api_key = headers.get('x-api-key', default = None)
     if api_key is None:
         api_key = request.args.get('api_key', default=None)
+        logging.info(f"got api_key from request.args")
+    logging.info(f"{api_key}")
     if api_key is None:
         return {"error" :
                 {
@@ -146,9 +146,14 @@ def register():
                 }
                 }
 
-    objects = request.get_json(force=True)
+    try:
+        objects = request.get_json(force=True)
+    except:
+        logging.info(sys.exc_info())
+
     success = False
     for oid, location in objects:
+        logging.info(f"Registering {oid} to {location}")
         # TODO: maybe get all oids this key can register and do the check in-memory instead of against the DB?
         cur.execute("SELECT r.id FROM registrant r, object o WHERE o.registrant_id=r.id AND r.api_key=%(api_key)s AND o.id=%(oid)s", {"api_key" : api_key, "oid" : oid})
         registrant_id = cur.fetchone()
