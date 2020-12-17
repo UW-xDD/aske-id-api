@@ -117,7 +117,7 @@ def reserve():
     conn.commit()
     return {"success" : True, "reserved_ids" : uuids}
 
-@bp.route('/register', methods=["POST"])
+@bp.route('/register', methods=["POST", "GET"])
 def register():
     helptext = {
             "v" : VERSION,
@@ -207,7 +207,7 @@ def lookup(oid):
                     "about" : helptext
                     }
                 }
-    cur.execute("SELECT o.id, o.location, r.name FROM registrant r, object o WHERE o.id=%(oid)s", {"oid" : oid})
+    cur.execute("SELECT o.id, o.location, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s", {"oid" : oid})
     oid, location, registrant = cur.fetchone()
     if oid is None:
         return {"error" : "ASKE-ID not found!"}
