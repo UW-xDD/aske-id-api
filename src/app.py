@@ -33,6 +33,8 @@ def table_exists(cur, table_name):
 conn = psycopg2.connect(host='aske-id-registration', user='zalando', password=os.environ["PG_PASSWORD"], sslmode='require', database='aske_id')
 cur = conn.cursor()
 
+VERSION = "v1_beta"
+
 if not table_exists(cur, "registrant"):
     cur.execute("""
         CREATE TABLE registrant (
@@ -50,11 +52,50 @@ if not table_exists(cur, "object"):
         );""")
     conn.commit()
 
-@bp.route('/reserve')
+@bp.route('/', methods=["GET"])
+def index():
+    return {
+            "success" : {
+                "v" : VERSION,
+                "descriptions" : "API for reserving or registering ASKE-IDs",
+                "routes": {
+                    f"/api/{VERSION}/reserve" : "Reserve a block of ASKE-IDs for later registration.",
+                    f"/api/{VERSION}/register" : "Register a location for a reserved ASKE-ID."
+                    }
+                }
+        }
+
+@bp.route('/reserve', methods=["POST"])
 def reserve():
-    api_key = request.args.get('api_key', default=None)
+    helptext = {
+            "v" : VERSION,
+            "description": "Reserve a block of ASKE-IDs for later registration.",
+            "options" : {
+                "parameters" : {
+                    "api_key" : "(required) API key assigned to an ASKE-ID registrant.",
+                    "n" : "(option, int, default 10) Number of ASKE-IDs to reserve."
+                    },
+                "methods" : ["POST"],
+                "accepted_body" : "{objects: [ASKE-ID, location]}",
+                "output_formats" : ["json"],
+                "fields" : {
+                    "reserved_ids" : "List of unique ASKE-IDs reserved for usage by the associated registrant API key."
+                    },
+                "examples": []
+                }
+            }
+    headers = request.headers
+    api_key = headers.get('x-api-key', default = None)
     if api_key is None:
-        return {"error" : "You must specify an API key!"}
+        api_key = request.args.get('api_key', default=None)
+    if api_key is None:
+        return {"error" :
+                {
+                    "message" : "You must specify an API key!",
+                    "v" : VERSION,
+                    "about" : helptext
+                }
+                }
 
     n_requested = request.args.get('n', default=10)
 
@@ -72,24 +113,53 @@ def reserve():
     conn.commit()
     return {"success" : True, "reserved_ids" : uuids}
 
-@bp.route('/register/<oid>')
+@bp.route('/register/', methods=["POST"])
 def register(oid):
-    api_key = request.args.get('api_key', default=None)
+    helptext = {
+            "v" : VERSION,
+            "description": "Register a location for a reserved ASKE-ID.",
+            "options" : {
+                "parameters" : {
+                    "api_key" : "(required) API key assigned to an ASKE-ID registrant.",
+                    "location" : "(required) Location of ASKE data resource to register to this ASKE-ID."
+                    },
+                "methods" : ["POST"],
+                "output_formats" : ["json"],
+                "fields" : {
+                    "reserved_ids" : "List of unique ASKE-IDs reserved for usage by the associated registrant API key."
+                    },
+                "examples": []
+                }
+            }
+
+    data = request.get_json(force=True)
+
+    headers = request.headers
+    api_key = headers.get('x-api-key', default = None)
     if api_key is None:
-        return {"error" : "You must specify an API key!"}
+        api_key = request.args.get('api_key', default=None)
+    if api_key is None:
+        return {"error" :
+                {
+                    "message" : "You must specify an API key!",
+                    "v" : VERSION,
+                    "about" : helptext
+                }
+                }
 
-    location = request.args.get('location')
-    if location is None:
-        return {"error" : "You must specify a location to register this ASKE-id."}
-
-    #  check that this API key is allowed to register this oid
-    cur.execute("SELECT r.id FROM registrant r, object o WHERE o.registrant_id=r.id AND r.api_key=%(api_key)s AND o.id=%(oid)s", {"api_key" : api_key, "oid" : oid})
-    registrant_id = cur.fetchone()
-    if registrant_id is None:
-        return {"error" : "Provided API key not allowed to register this ASKE-ID!"}
-    cur.execute("UPDATE object SET location=%(location)s WHERE id=%(oid)s", {"location" : location, "oid": oid})
-    conn.commit()
-    return {"success" : True}
+    objects = data.get('objects', type=list, default=[])
+    success = False
+    for oid, location in objects:
+        # TODO: maybe get all oids this key can register and do the check in-memory instead of against the DB?
+        cur.execute("SELECT r.id FROM registrant r, object o WHERE o.registrant_id=r.id AND r.api_key=%(api_key)s AND o.id=%(oid)s", {"api_key" : api_key, "oid" : oid})
+        registrant_id = cur.fetchone()
+        if registrant_id is None:
+            continue
+#            return {"error" : "Provided API key not allowed to register this ASKE-ID!"}
+        cur.execute("UPDATE object SET location=%(location)s WHERE id=%(oid)s", {"location" : location, "oid": oid})
+        conn.commit()
+        success = True
+    return {"success" : success}
 
 if 'PREFIX' in os.environ:
     logging.info(f"Stripping {os.environ['PREFIX']}")
