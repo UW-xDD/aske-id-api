@@ -258,6 +258,7 @@ def register():
         }
         }
 
+@bp.route('/id', defaults={'oid': None})
 @bp.route('/id/<oid>', methods=["GET"])
 def lookup(oid):
     helptext = {
