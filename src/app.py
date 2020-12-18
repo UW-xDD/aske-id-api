@@ -77,7 +77,6 @@ def reserve():
                     "n" : "(option, int, default 10) Number of ASKE-IDs to reserve."
                     },
                 "methods" : ["POST"],
-                "accepted_body" : "{objects: [ASKE-ID, location]}",
                 "output_formats" : ["json"],
                 "fields" : {
                     "reserved_ids" : "List of unique ASKE-IDs reserved for usage by the associated registrant API key."
