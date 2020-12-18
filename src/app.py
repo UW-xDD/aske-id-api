@@ -179,7 +179,7 @@ def create():
     for location in objects:
         logging.info(location)
         try:
-            cur.execute("INSERT INTO object (location) VALUE (%(location)s) RETURNING id, location", {"location" : location})
+            cur.execute("INSERT INTO object (location) VALUES (%(location)s) RETURNING id, location", {"location" : location})
             oid, location = cur.fetchone()
             conn.commit()
             registered.append((oid, location))
