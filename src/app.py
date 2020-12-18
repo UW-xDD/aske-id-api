@@ -164,8 +164,7 @@ def create():
                 }
                 }
 
-    # TODO: check API key validity
-    cur.execute("SELECT r.id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
+    cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
     check = cur.fetchone()
     if check is None:
         return {"error" :
