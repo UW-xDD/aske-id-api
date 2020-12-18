@@ -177,6 +177,7 @@ def create():
 
     registered = []
     for location in objects:
+        logging.info(location)
         try:
             cur.execute("INSERT INTO object (location) VALUE (%(location)s) RETURNING id, location", {"location" : location})
             oid, location = cur.fetchone()
