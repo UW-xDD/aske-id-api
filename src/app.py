@@ -119,6 +119,79 @@ def reserve():
     conn.commit()
     return {"success" : True, "reserved_ids" : uuids}
 
+@bp.route('/create', methods=["POST", "GET"])
+def create():
+    helptext = {
+            "v" : VERSION,
+            "description": "Create and register a new ASKE-ID.",
+            "options" : {
+                "parameters" : {
+                    "api_key" : "(required) API key assigned to an ASKE-ID registrant. Can also be passed as a header in the 'x-api-key' field."
+                    },
+                "body" : "POSTed request body must be a JSON object of the form [location1, location2].",
+                "methods" : ["POST"],
+                "output_formats" : ["json"],
+                "fields" : {
+                    "registered_ids" : "List of successfully registered (or updated) ASKE-IDs."
+                    },
+                "examples": []
+                }
+            }
+    if request.method == "GET":
+        return {"success" : helptext}
+
+    headers = request.headers
+    api_key = headers.get('x-api-key', default = None)
+    if api_key is None:
+        api_key = request.args.get('api_key', default=None)
+        logging.info(f"got api_key from request.args")
+    if api_key is None:
+        return {"error" :
+                {
+                    "message" : "You must specify an API key!",
+                    "v" : VERSION,
+                    "about" : helptext
+                }
+                }
+    try:
+        objects = request.get_json()
+    except:
+        return {"error" :
+                {
+                    "message" : "Invalid body! Registration expects a JSON object of the form [[<ASKE-ID>, <location>], [<ASKE-ID>, <location>]].",
+                    "v" : VERSION,
+                    "about" : helptext
+                }
+                }
+
+    # TODO: check API key validity
+    cur.execute("SELECT r.id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
+    check = cur.fetchone()
+    if check is None:
+        return {"error" :
+                {
+                    "message" : "Invalid API key!",
+                    "v" : VERSION,
+                    "about" : helptext
+                }
+                }
+
+    registered = []
+    for location in objects:
+        # TODO: maybe get all oids this key can register and do the check in-memory instead of against the DB?
+        try:
+            cur.execute("INSERT INTO object location VALUE (%(location)s) RETURNING id, location", {"location" : location})
+            oid, location = cur.fetchone()
+            conn.commit()
+            registered.append((oid, location))
+        except:
+            logging.info(f"Couldn't register {oid} to {location}.")
+            conn.commit()
+    return {"success" : {
+            "registered_ids" : registered
+        }
+        }
+
 @bp.route('/register', methods=["POST", "GET"])
 def register():
     helptext = {
