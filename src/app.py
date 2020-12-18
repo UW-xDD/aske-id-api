@@ -103,6 +103,8 @@ def reserve():
                 }
 
     n_requested = request.args.get('n', default=10)
+    if not isinstance(n_requested, int):
+        n_requested = int(n_requested)
 
     cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
     registrant_id = cur.fetchone()
