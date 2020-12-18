@@ -177,14 +177,14 @@ def create():
 
     registered = []
     for location in objects:
-        # TODO: maybe get all oids this key can register and do the check in-memory instead of against the DB?
         try:
-            cur.execute("INSERT INTO object location VALUE (%(location)s) RETURNING id, location", {"location" : location})
+            cur.execute("INSERT INTO object (location) VALUE (%(location)s) RETURNING id, location", {"location" : location})
             oid, location = cur.fetchone()
             conn.commit()
             registered.append((oid, location))
         except:
-            logging.info(f"Couldn't register {oid} to {location}.")
+            logging.info(f"Couldn't register {location}.")
+            logging.info(sys.exc_info())
             conn.commit()
     return {"success" : {
             "registered_ids" : registered
