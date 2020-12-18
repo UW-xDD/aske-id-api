@@ -59,9 +59,10 @@ def index():
                 "v" : VERSION,
                 "descriptions" : "API for reserving or registering ASKE-IDs",
                 "routes": {
-                    f"/api/{VERSION}/reserve" : "Reserve a block of ASKE-IDs for later registration.",
-                    f"/api/{VERSION}/register" : "Register a location for a reserved ASKE-ID.",
-                    f"/api/{VERSION}/id" : "Lookup an ASKE-ID."
+                    f"/reserve" : "Reserve a block of ASKE-IDs for later registration.",
+                    f"/register" : "Register a location for a reserved ASKE-ID.",
+                    f"/create" : "Create and ASKE-ID for existing resources.",
+                    f"/id" : "Lookup an ASKE-ID."
                     }
                 }
         }
@@ -177,7 +178,6 @@ def create():
 
     registered = []
     for location in objects:
-        logging.info(location)
         try:
             cur.execute("INSERT INTO object (location) VALUES (%(location)s) RETURNING id, location", {"location" : location})
             oid, location = cur.fetchone()
