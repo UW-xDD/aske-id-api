@@ -30,7 +30,7 @@ def table_exists(cur, table_name):
             continue
     return False
 
-conn = psycopg2.connect(host='aske-id-registration', user='zalando', password=os.environ["PG_PASSWORD"], sslmode='require', database='aske_id')
+conn = psycopg2.connect(host='aske-id-registration', user='zalando', password=os.environ["PG_PASSWORD"], sslmode='require', database='aske_id', autocommit=True)
 cur = conn.cursor()
 
 VERSION = "v1_beta"
