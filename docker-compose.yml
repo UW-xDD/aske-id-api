@@ -1,0 +1,28 @@
+version: "3.1"
+services:
+  postgres:
+    # replace username/repo:tag with your name and image details
+    image: postgres:10.5
+    environment:
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: aske_id
+    networks:
+      - webnet
+
+  aske-id-api:
+    build: .
+    restart: always
+    environment:
+      PG_USER: docker
+      PG_PASSWORD: docker
+      PG_HOST: postgres
+    ports:
+      - "5000:5000"
+    networks:
+      - webnet
+
+networks:
+  webnet:
+
