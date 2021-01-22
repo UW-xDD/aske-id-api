@@ -5,7 +5,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 import logging
 import os, sys
-from uuid import uuid4
+from uuid import uuid4, UUID
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 
 app = Flask(__name__)
@@ -30,13 +30,26 @@ def table_exists(cur, table_name):
             continue
     return False
 
-conn = psycopg2.connect(host='aske-id-registration', user='zalando', password=os.environ["PG_PASSWORD"], sslmode='require', database='aske_id')
+if "PG_HOST" in os.environ:
+    host = os.environ["PG_HOST"]
+else:
+    host = 'aske-id-registration'
+
+if "PG_USER" in os.environ:
+    user = os.environ["PG_USER"]
+else:
+    user = 'zalando'
+conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
 conn.autocommit = True
 cur = conn.cursor()
 
 VERSION = "v1_beta"
 
 if not table_exists(cur, "registrant"):
+    cur.execute("""
+        CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+        """)
+    conn.commit()
     cur.execute("""
         CREATE TABLE registrant (
             id SERIAL PRIMARY KEY,
@@ -94,10 +107,15 @@ def reserve():
     api_key = headers.get('x-api-key', default = None)
     if api_key is None:
         api_key = request.args.get('api_key', default=None)
-    if api_key is None:
+    try:
+        check = UUID(api_key)
+    except ValueError:
+        check = False
+
+    if api_key is None or check is False:
         return {"error" :
                 {
-                    "message" : "You must specify an API key!",
+                    "message" : "You must specify a valid API key!",
                     "v" : VERSION,
                     "about" : helptext
                 }
@@ -110,7 +128,12 @@ def reserve():
     cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
     registrant_id = cur.fetchone()
     if registrant_id is None:
-        return {"error" : "Provided API key not allowed to reserve ASKE-IDs!"}
+        return {"error" :
+                {"message" : "Provided API key not allowed to reserve ASKE-IDs!",
+                    "v": VERSION,
+                    "about" : helptext
+                    }
+                }
 
     uuids = [str(uuid4()) for i in range(n_requested)]
 
@@ -219,6 +242,20 @@ def register():
     if api_key is None:
         api_key = request.args.get('api_key', default=None)
         logging.info(f"got api_key from request.args")
+
+    try:
+        check = UUID(api_key)
+    except ValueError:
+        check = False
+
+    if api_key is None or check is False:
+        return {"error" :
+                {
+                    "message" : "You must specify a valid API key!",
+                    "v" : VERSION,
+                    "about" : helptext
+                }
+                }
     if api_key is None:
         return {"error" :
                 {
@@ -285,16 +322,22 @@ def lookup(oid):
                     }
                 }
     cur.execute("SELECT o.id, o.location, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s", {"oid" : oid})
-    oid, location, registrant = cur.fetchone()
-    if oid is None:
-        return {"error" : "ASKE-ID not found!"}
-    else:
-        return {"success" : {
-            "identifier" : [{"type" : "_aske-id", "id" : oid}],
-            "link" : [{"url" : location}],
-            "registrant" : registrant
-            }
+    try:
+        oid, location, registrant = cur.fetchone()
+    except TypeError:
+        return{
+                "error" : {
+                    "message": "You most provide an ASKE-ID to look up!",
+                    "v": VERSION,
+                    "about" : helptext
+                    }
+                }
+    return {"success" : {
+        "identifier" : [{"type" : "_aske-id", "id" : oid}],
+        "link" : [{"url" : location}],
+        "registrant" : registrant
         }
+    }
 
 if 'PREFIX' in os.environ:
     logging.info(f"Stripping {os.environ['PREFIX']}")
