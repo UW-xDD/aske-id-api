@@ -203,7 +203,7 @@ def create():
     registered = []
     for location in objects:
         try:
-            cur.execute("INSERT INTO object (location) VALUES (%(location)s) RETURNING id, location", {"location" : location})
+            cur.execute("INSERT INTO object (location, registrant_id) VALUES (%(location)s, %(registrant_id)s) RETURNING id, location", {"location" : location, "registrant_id" : check})
             oid, location = cur.fetchone()
             conn.commit()
             registered.append((oid, location))
@@ -321,7 +321,7 @@ def lookup(oid):
                     "about" : helptext
                     }
                 }
-    cur.execute("SELECT o.id, o.location, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s", {"oid" : oid})
+    cur.execute("SELECT o.id, o.location, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s AND o.registrant_id=r.id", {"oid" : oid})
     try:
         oid, location, registrant = cur.fetchone()
     except TypeError:
