@@ -39,7 +39,7 @@ if "PG_USER" in os.environ:
     user = os.environ["PG_USER"]
 else:
     user = 'zalando'
-conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
+conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
 conn.autocommit = True
 cur = conn.cursor()
 
