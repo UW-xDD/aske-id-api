@@ -39,32 +39,36 @@ if "PG_USER" in os.environ:
     user = os.environ["PG_USER"]
 else:
     user = 'zalando'
-conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
-conn.autocommit = True
-cur = conn.cursor()
 
 VERSION = "v1_beta"
 
-if not table_exists(cur, "registrant"):
-    cur.execute("""
+
+cconn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+cconn.autocommit = True
+ccur = cconn.cursor()
+
+if not table_exists(ccur, "registrant"):
+    ccur.execute("""
         CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
         """)
-    conn.commit()
-    cur.execute("""
+    cconn.commit()
+    ccur.execute("""
         CREATE TABLE registrant (
             id SERIAL PRIMARY KEY,
             registrant text,
             api_key uuid DEFAULT uuid_generate_v4()
         );""")
-    conn.commit()
-if not table_exists(cur, "object"):
-    cur.execute("""
+    cconn.commit()
+if not table_exists(ccur, "object"):
+    ccur.execute("""
         CREATE TABLE object (
             id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
             registrant_id integer REFERENCES registrant(id),
             location text DEFAULT NULL
         );""")
-    conn.commit()
+    cconn.commit()
+ccur.close()
+cconn.close()
 
 @bp.route('/', methods=["GET"])
 def index():
@@ -125,9 +129,14 @@ def reserve():
     if not isinstance(n_requested, int):
         n_requested = int(n_requested)
 
+    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+    conn.autocommit = True
+    cur = conn.cursor()
     cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
     registrant_id = cur.fetchone()
     if registrant_id is None:
+        cur.close()
+        conn.close()
         return {"error" :
                 {"message" : "Provided API key not allowed to reserve ASKE-IDs!",
                     "v": VERSION,
@@ -142,6 +151,8 @@ def reserve():
         "INSERT INTO object (id, registrant_id) VALUES %s",
         [(uuid, registrant_id) for uuid in uuids])
     conn.commit()
+    cur.close()
+    conn.close()
     return {"success" : True, "reserved_ids" : uuids}
 
 @bp.route('/create', methods=["POST", "GET"])
@@ -189,9 +200,15 @@ def create():
                 }
                 }
 
+    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+    conn.autocommit = True
+    cur = conn.cursor()
+
     cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
     check = cur.fetchone()
     if check is None:
+        cur.close()
+        conn.close()
         return {"error" :
                 {
                     "message" : "Invalid API key!",
@@ -211,6 +228,8 @@ def create():
             logging.info(f"Couldn't register {location}.")
             logging.info(sys.exc_info())
             conn.commit()
+    cur.close()
+    conn.close()
     return {"success" : {
             "registered_ids" : registered
         }
@@ -276,6 +295,9 @@ def register():
                 }
 
     registered = []
+    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+    conn.autocommit = True
+    cur = conn.cursor()
     for oid, location in objects:
         logging.info(f"Registering {oid} to {location}")
         # TODO: maybe get all oids this key can register and do the check in-memory instead of against the DB?
@@ -291,6 +313,8 @@ def register():
         except:
             logging.info(f"Couldn't register {oid} to {location}.")
             conn.commit()
+    cur.close()
+    conn.close()
     return {"success" : {
             "registered_ids" : registered
         }
@@ -321,10 +345,15 @@ def lookup(oid):
                     "about" : helptext
                     }
                 }
+    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+    conn.autocommit = True
+    cur = conn.cursor()
     cur.execute("SELECT o.id, o.location, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s AND o.registrant_id=r.id", {"oid" : oid})
     try:
         oid, location, registrant = cur.fetchone()
     except TypeError:
+        cur.close()
+        conn.close()
         return{
                 "error" : {
                     "message": "You most provide an ASKE-ID to look up!",
@@ -332,6 +361,8 @@ def lookup(oid):
                     "about" : helptext
                     }
                 }
+    cur.close()
+    conn.close()
     return {"success" : {
         "identifier" : [{"type" : "_aske-id", "id" : oid}],
         "link" : [{"url" : location}],
