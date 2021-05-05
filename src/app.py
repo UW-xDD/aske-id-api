@@ -335,7 +335,7 @@ def lookup(oid):
                 }
             }
 
-    if oid is None:
+    if oid is not None:
         oid = request.args.get('aske_id', default=None)
     if oid is None:
         return{
@@ -348,9 +348,9 @@ def lookup(oid):
     conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
     conn.autocommit = True
     cur = conn.cursor()
-    cur.execute("SELECT o.id, o.location, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s AND o.registrant_id=r.id", {"oid" : oid})
+    cur.execute("SELECT o.id, o.location, o.description, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s AND o.registrant_id=r.id", {"oid" : oid})
     try:
-        oid, location, registrant = cur.fetchone()
+        oid, location, description, registrant = cur.fetchone()
     except TypeError:
         cur.close()
         conn.close()
@@ -366,6 +366,7 @@ def lookup(oid):
     return {"success" : {
         "identifier" : [{"type" : "_aske-id", "id" : oid}],
         "link" : [{"url" : location}],
+        "metadata" : {"description" : description},
         "registrant" : registrant
         }
     }
