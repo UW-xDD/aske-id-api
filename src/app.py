@@ -321,6 +321,7 @@ def register():
         }
         }
 
+@bp.route('/id/', defaults={'oid': None})
 @bp.route('/id', defaults={'oid': None})
 @bp.route('/id/<oid>', methods=["GET"])
 def lookup(oid):
@@ -336,7 +337,8 @@ def lookup(oid):
                 }
             }
 
-    if oid is not None:
+    logging.info(f"Looking up {oid}")
+    if oid is None:
         oid = request.args.get('aske_id', default=None)
     if oid is None:
         return{
