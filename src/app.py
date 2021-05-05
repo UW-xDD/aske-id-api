@@ -206,6 +206,7 @@ def create():
 
     cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
     check = cur.fetchone()
+    logging.info(f"api_key associated with {check}")
     if check is None:
         cur.close()
         conn.close()
