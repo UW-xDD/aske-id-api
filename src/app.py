@@ -13,6 +13,13 @@ app.config['JSON_SORT_KEYS'] = False
 app.url_map.strict_slashes = False
 bp = Blueprint('ASKE-ID-api', __name__)
 
+def prepare(objects):
+    try:
+        for oid, location, description in prepare(objects):
+            yield((oid, location, description))
+    except ValueError:
+        yield((oid, location, ''))
+
 def table_exists(cur, table_name):
     """
     Check if a table exists in the current database
@@ -195,7 +202,7 @@ def create():
     except:
         return {"error" :
                 {
-                    "message" : "Invalid body! Registration expects a JSON object of the form [[<ASKE-ID>, <location>], [<ASKE-ID>, <location>]].",
+                    "message" : "Invalid body! Registration expects a JSON object of the form [<location>, <location>] or [[<location>, <description>], [<location>, <description>], ...].",
                     "v" : VERSION,
                     "about" : helptext
                 }
@@ -207,7 +214,6 @@ def create():
 
     cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
     check = cur.fetchone()
-    logging.info(f"api_key associated with {check}")
     if check is None:
         cur.close()
         conn.close()
@@ -220,16 +226,28 @@ def create():
                 }
 
     registered = []
-    for location in objects:
-        try:
-            cur.execute("INSERT INTO object (location, registrant_id) VALUES (%(location)s, %(registrant_id)s) RETURNING id, location", {"location" : location, "registrant_id" : check})
-            oid, location = cur.fetchone()
-            conn.commit()
-            registered.append((oid, location))
-        except:
-            logging.info(f"Couldn't register {location}.")
-            logging.info(sys.exc_info())
-            conn.commit()
+    if isinstance(objects[0], list):
+        for location, description in objects:
+            try:
+                cur.execute("INSERT INTO object (location, description, registrant_id) VALUES (%(location)s, %(description)s, %(registrant_id)s) RETURNING id, location, description", {"location" : location, "description" : description, "registrant_id" : check})
+                oid, location, description = cur.fetchone()
+                conn.commit()
+                registered.append((oid, location, description))
+            except:
+                logging.info(f"Couldn't register {location}.")
+                logging.info(sys.exc_info())
+                conn.commit()
+    else:
+        for location in objects:
+            try:
+                cur.execute("INSERT INTO object (location, registrant_id) VALUES (%(location)s, %(registrant_id)s) RETURNING id, location", {"location" : location, "registrant_id" : check})
+                oid, location = cur.fetchone()
+                conn.commit()
+                registered.append((oid, location))
+            except:
+                logging.info(f"Couldn't register {location}.")
+                logging.info(sys.exc_info())
+                conn.commit()
     cur.close()
     conn.close()
     return {"success" : {
@@ -300,7 +318,7 @@ def register():
     conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
     conn.autocommit = True
     cur = conn.cursor()
-    for oid, location in objects:
+    for oid, location, description in prepare(objects):
         logging.info(f"Registering {oid} to {location}")
         # TODO: maybe get all oids this key can register and do the check in-memory instead of against the DB?
         try:
@@ -309,7 +327,7 @@ def register():
             if registrant_id is None:
                 continue
     #            return {"error" : "Provided API key not allowed to register this ASKE-ID!"}
-            cur.execute("UPDATE object SET location=%(location)s WHERE id=%(oid)s", {"location" : location, "oid": oid})
+            cur.execute("UPDATE object SET location=%(location)s, description=%(description)s WHERE id=%(oid)s", {"location" : location, "description" : description, "oid": oid})
             conn.commit()
             registered.append(oid)
         except:
@@ -338,7 +356,6 @@ def lookup(oid):
                 }
             }
 
-    logging.info(f"Looking up {oid}")
     if oid is None:
         oid = request.args.get('aske_id', default=None)
     if "all" in request.args:
