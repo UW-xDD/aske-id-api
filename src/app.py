@@ -43,7 +43,7 @@ else:
 VERSION = "v1_beta"
 
 
-cconn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+cconn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
 cconn.autocommit = True
 ccur = cconn.cursor()
 
@@ -64,7 +64,8 @@ if not table_exists(ccur, "object"):
         CREATE TABLE object (
             id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
             registrant_id integer REFERENCES registrant(id),
-            location text DEFAULT NULL
+            location text DEFAULT NULL,
+            description text
         );""")
     cconn.commit()
 ccur.close()
@@ -129,7 +130,7 @@ def reserve():
     if not isinstance(n_requested, int):
         n_requested = int(n_requested)
 
-    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
     conn.autocommit = True
     cur = conn.cursor()
     cur.execute("SELECT id FROM registrant WHERE api_key=%(api_key)s", {"api_key" : api_key})
@@ -200,7 +201,7 @@ def create():
                 }
                 }
 
-    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
     conn.autocommit = True
     cur = conn.cursor()
 
@@ -296,7 +297,7 @@ def register():
                 }
 
     registered = []
-    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
     conn.autocommit = True
     cur = conn.cursor()
     for oid, location in objects:
@@ -340,6 +341,8 @@ def lookup(oid):
     logging.info(f"Looking up {oid}")
     if oid is None:
         oid = request.args.get('aske_id', default=None)
+    if "all" in request.args:
+        oid = 'all'
     if oid is None:
         return{
                 "error" : {
@@ -348,30 +351,48 @@ def lookup(oid):
                     "about" : helptext
                     }
                 }
-    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id', sslmode='require')
+    conn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
     conn.autocommit = True
     cur = conn.cursor()
-    cur.execute("SELECT o.id, o.location, o.description, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s AND o.registrant_id=r.id", {"oid" : oid})
-    try:
-        oid, location, description, registrant = cur.fetchone()
-    except TypeError:
-        cur.close()
-        conn.close()
-        return{
-                "error" : {
-                    "message": "You most provide an ASKE-ID to look up!",
-                    "v": VERSION,
-                    "about" : helptext
+    results = []
+    if oid=='all':
+        cur.execute("SELECT o.id, o.location, o.description, r.registrant FROM registrant r, object o WHERE o.registrant_id=r.id", {"oid" : oid})
+        for oid, location, description, registrant in cur.fetchall():
+            results.append(
+                    {
+                        "identifier" : [{"type" : "_aske-id", "id" : oid}],
+                        "link" : [{"url" : location}],
+                        "metadata" : {"description" : description},
+                        "registrant" : registrant
+                        }
+                    )
+    else:
+        cur.execute("SELECT o.id, o.location, o.description, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s AND o.registrant_id=r.id", {"oid" : oid})
+        try:
+            oid, location, description, registrant = cur.fetchone()
+            results.append(
+                    {
+                        "identifier" : [{"type" : "_aske-id", "id" : oid}],
+                        "link" : [{"url" : location}],
+                        "metadata" : {"description" : description},
+                        "registrant" : registrant
+                        }
+                    )
+        except TypeError:
+            cur.close()
+            conn.close()
+            return{
+                    "error" : {
+                        "message": "You most provide an ASKE-ID to look up!",
+                        "v": VERSION,
+                        "about" : helptext
+                        }
                     }
-                }
     cur.close()
     conn.close()
-    return {"success" : {
-        "identifier" : [{"type" : "_aske-id", "id" : oid}],
-        "link" : [{"url" : location}],
-        "metadata" : {"description" : description},
-        "registrant" : registrant
-        }
+    return {"success" :{
+            "objects" : results
+            }
     }
 
 if 'PREFIX' in os.environ:
