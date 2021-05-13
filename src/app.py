@@ -356,7 +356,7 @@ def lookup(oid):
     cur = conn.cursor()
     results = []
     if oid=='all':
-        cur.execute("SELECT o.id, o.location, o.description, r.registrant FROM registrant r, object o WHERE o.registrant_id=r.id", {"oid" : oid})
+        cur.execute("SELECT o.id, o.location, o.description, r.registrant FROM registrant r, object o WHERE o.registrant_id=r.id AND location IS NOT NULL", {"oid" : oid})
         for oid, location, description, registrant in cur.fetchall():
             results.append(
                     {
