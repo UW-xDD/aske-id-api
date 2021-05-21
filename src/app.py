@@ -384,8 +384,8 @@ def lookup(oid):
                         }
                     )
     else:
-        cur.execute("SELECT o.id, o.location, o.description, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s AND o.registrant_id=r.id", {"oid" : oid})
         try:
+            cur.execute("SELECT o.id, o.location, o.description, r.registrant FROM registrant r, object o WHERE o.id=%(oid)s AND o.registrant_id=r.id", {"oid" : oid})
             oid, location, description, registrant = cur.fetchone()
             results.append(
                     {
