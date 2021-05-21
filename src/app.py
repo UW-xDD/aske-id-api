@@ -395,7 +395,7 @@ def lookup(oid):
                         "registrant" : registrant
                         }
                     )
-        except TypeError:
+        except (TypeError, psycopg2.errors.InvalidTextRepresentation):
             cur.close()
             conn.close()
             return{
