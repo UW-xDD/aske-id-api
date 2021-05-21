@@ -352,7 +352,7 @@ def lookup(oid):
                     "aske_id" : "ASKE-ID to look up (may also be supplied as a bare positional argument on this URL)."
                     },
                 "output_formats" : ["bibjson"],
-                "examples": ['/api/id/ba736f76-27c1-4156-9f4e-752862c21bc2', '/api/id?aske_id=ba736f76-27c1-4156-9f4e-752862c21bc2']
+                "examples": ['/id/5ed07aa7-b7e2-4ee7-bd8c-dde5c47a1d8e', '/id?aske_id=5ed07aa7-b7e2-4ee7-bd8c-dde5c47a1d8e', '/id?all']
                 }
             }
 
@@ -363,7 +363,7 @@ def lookup(oid):
     if oid is None:
         return{
                 "error" : {
-                    "message": "You most provide an ASKE-ID to look up!",
+                    "message": "You must provide an ASKE-ID to look up!",
                     "v": VERSION,
                     "about" : helptext
                     }
@@ -400,7 +400,7 @@ def lookup(oid):
             conn.close()
             return{
                     "error" : {
-                        "message": "You most provide an ASKE-ID to look up!",
+                        "message": "ASKE-ID not found!",
                         "v": VERSION,
                         "about" : helptext
                         }
