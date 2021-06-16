@@ -15,7 +15,7 @@ bp = Blueprint('ASKE-ID-api', __name__)
 
 def prepare(objects):
     try:
-        for oid, location, description in prepare(objects):
+        for oid, location, description in objects:
             yield((oid, location, description))
     except ValueError:
         yield((oid, location, ''))
