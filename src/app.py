@@ -14,11 +14,11 @@ app.url_map.strict_slashes = False
 bp = Blueprint('ASKE-ID-api', __name__)
 
 def prepare(objects):
-    try:
-        for oid, location, description in objects:
-            yield((oid, location, description))
-    except ValueError:
-        yield((oid, location, ''))
+    for obj in objects:
+        if len(obj) == 3:
+            yield(obj)
+        else: # no description
+            yield((obj[0], obj[1], ''))
 
 def table_exists(cur, table_name):
     """
