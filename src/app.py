@@ -52,7 +52,7 @@ else:
 VERSION = "v1_beta"
 
 
-loggin.info(f"Connecting to {host} with {user} and password {os.environ['PG_PASSWORD']}")
+logging.info(f"Connecting to {host} with {user} and password {os.environ['PG_PASSWORD']}")
 cconn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
 cconn.autocommit = True
 ccur = cconn.cursor()
