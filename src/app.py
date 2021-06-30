@@ -5,6 +5,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 import logging
 import os, sys
+import time
 from uuid import uuid4, UUID
 logging.basicConfig(format='%(levelname)s :: %(asctime)s :: %(message)s', level=logging.DEBUG)
 
@@ -31,7 +32,7 @@ def table_exists(cur, table_name):
     """
     logging.info(f"checking if table {table_name} exists")
     cur.execute("""SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' """)
-    logging.info(cur.fetch_one())
+    logging.info(cur.fetchone())
     cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' """)
     for table in cur.fetchall():
         logging.info(table[0])
@@ -39,6 +40,7 @@ def table_exists(cur, table_name):
             return True
         else:
             continue
+        time.sleep("3600")
     return False
 
 if "PG_HOST" in os.environ:
