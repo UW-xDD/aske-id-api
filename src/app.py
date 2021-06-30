@@ -29,8 +29,10 @@ def table_exists(cur, table_name):
     :returns: True if it exists, False if not
 
     """
-    cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' """)
     logging.info(f"checking if table {table_name} exists")
+    cur.execute("""SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' """)
+    logging.info(cur.fetch_one())
+    cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' """)
     for table in cur.fetchall():
         logging.info(table[0])
         if table_name == table[0]:
