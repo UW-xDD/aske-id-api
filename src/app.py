@@ -39,8 +39,8 @@ def table_exists(cur, table_name):
         if table_name == table[0]:
             return True
         else:
+            time.sleep("3600")
             continue
-        time.sleep("3600")
     return False
 
 if "PG_HOST" in os.environ:
