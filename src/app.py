@@ -30,7 +30,9 @@ def table_exists(cur, table_name):
 
     """
     cur.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' """)
+    logging.info(f"checking if table {table_name} exists")
     for table in cur.fetchall():
+        logging.info(table[0])
         if table_name == table[0]:
             return True
         else:
@@ -50,6 +52,7 @@ else:
 VERSION = "v1_beta"
 
 
+loggin.info(f"Connecting to {host} with {user} and password {os.environ['PG_PASSWORD']}")
 cconn = psycopg2.connect(host=host, user=user, password=os.environ["PG_PASSWORD"], database='aske_id')
 cconn.autocommit = True
 ccur = cconn.cursor()
